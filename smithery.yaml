@@ -1,3 +1,4 @@
-runtime: "typescript"
-environment:
-  HF_TOKEN: ${HF_TOKEN}
+#runtime: "typescript"
+runtime: "container"
+# environment:
+#   HF_TOKEN: ${HF_TOKEN}

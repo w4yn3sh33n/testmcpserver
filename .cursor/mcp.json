@@ -3,6 +3,8 @@
         "greeting-server": {
             "command": "node",
             "args": ["/home/user/Editings/DEV/MCP-Multicampus/typescript-mcp-server-boilerplate/build/index.js"]
-        }
+        },
+        "smithery-mcp-server": {
+            "url": "https://server.smithery.ai/@w4yn3sh33n/testmcpserver/mcp"
     }
 }
