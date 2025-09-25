@@ -1,17 +1,15 @@
 import { config } from 'dotenv'
-import { join, dirname } from 'path'
-import { fileURLToPath } from 'url'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod'
 import { InferenceClient } from '@huggingface/inference'
 
-// ES 모듈에서 __dirname 대체
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = dirname(__filename)
+// 환경변수 로드 (Smithery 환경 호환)
+config(); // 현재 작업 디렉토리의 .env
+config({ path: '.env' });
+config({ path: 'src/.env' });
 
-// .env 파일 로드
-config({ path: join(__dirname, '.env') })
+// Smithery 환경에서는 환경변수가 자동으로 설정될 수 있음
 
 // 환경변수 확인
 if (!process.env.HF_TOKEN) {
