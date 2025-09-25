@@ -1,0 +1,8 @@
+{
+    "mcpServers": {
+        "greeting-server": {
+            "command": "node",
+            "args": ["/home/user/Editings/DEV/MCP-Multicampus/typescript-mcp-server-boilerplate/build/index.js"]
+        }
+    }
+}

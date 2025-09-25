@@ -1,0 +1,27 @@
+{
+    "name": "greeting-mcp-server",
+    "version": "1.0.0",
+    "main": "index.js",
+    "type": "module",
+    "bin": {
+        "greeting-mcp-server": "./build/index.js"
+    },
+    "scripts": {
+        "build": "tsc && chmod 755 build/index.js"
+    },
+    "files": [
+        "build"
+    ],
+    "keywords": ["mcp", "greeting", "multilingual", "english", "korean", "japanese"],
+    "author": "",
+    "license": "ISC",
+    "description": "A multilingual greeting MCP server that supports English, Korean, and Japanese greetings",
+    "dependencies": {
+        "@modelcontextprotocol/sdk": "^1.18.1",
+        "zod": "^3.25.76"
+    },
+    "devDependencies": {
+        "@types/node": "^24.5.2",
+        "typescript": "^5.9.2"
+    }
+}
