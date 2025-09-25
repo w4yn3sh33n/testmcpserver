@@ -6,8 +6,6 @@ import { InferenceClient } from '@huggingface/inference'
 
 // 환경변수 로드 (Smithery 환경 호환)
 config(); // 현재 작업 디렉토리의 .env
-config({ path: '.env' });
-config({ path: 'src/.env' });
 
 // Smithery 환경에서는 환경변수가 자동으로 설정될 수 있음
 
