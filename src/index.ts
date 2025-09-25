@@ -1,10 +1,26 @@
+import { config } from 'dotenv'
+import { join, dirname } from 'path'
+import { fileURLToPath } from 'url'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod'
+import { InferenceClient } from '@huggingface/inference'
+
+// ES 모듈에서 __dirname 대체
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
+
+// .env 파일 로드
+config({ path: join(__dirname, '.env') })
+
+// 환경변수 확인
+if (!process.env.HF_TOKEN) {
+    console.error('Warning: HF_TOKEN environment variable is not set. Image generation will not work.')
+}
 
 // 서버 인스턴스 생성
 const server = new McpServer({
-    name: 'greeting-mcp-server',
+    name: 'greeting-image-mcp-server',
     version: '1.0.0',
     capabilities: {
         tools: {},
@@ -163,6 +179,94 @@ server.tool(
     }
 )
 
+// 이미지 생성 도구
+server.tool(
+    'generate_image',
+    {
+        prompt: z.string().describe('이미지 생성을 위한 프롬프트 설명')
+    },
+    async ({ prompt }) => {
+        try {
+            // Hugging Face Token 확인
+            const hfToken = process.env.HF_TOKEN;
+            if (!hfToken) {
+                throw new Error('HF_TOKEN 환경변수가 설정되지 않았습니다');
+            }
+
+            // Inference Client 생성
+            const client = new InferenceClient(hfToken);
+
+            // 이미지 생성
+            const image = await client.textToImage({
+                provider: "fal-ai",
+                model: "black-forest-labs/FLUX.1-schnell",
+                inputs: prompt,
+                parameters: { num_inference_steps: 5 },
+            });
+
+            // 이미지를 base64로 변환
+            let base64Data: string;
+            const imageResult = image as any;
+            
+            if (imageResult instanceof Blob) {
+                // Blob인 경우
+                const arrayBuffer = await imageResult.arrayBuffer();
+                base64Data = Buffer.from(arrayBuffer).toString('base64');
+            } else if (typeof imageResult === 'string') {
+                // 이미 base64 문자열인 경우
+                base64Data = imageResult;
+            } else if (imageResult instanceof ArrayBuffer) {
+                // ArrayBuffer인 경우
+                base64Data = Buffer.from(imageResult).toString('base64');
+            } else if (imageResult && imageResult.arrayBuffer) {
+                // 다른 형태의 Blob-like 객체인 경우
+                const arrayBuffer = await imageResult.arrayBuffer();
+                base64Data = Buffer.from(arrayBuffer).toString('base64');
+            } else {
+                // 기타 경우 JSON 응답일 수 있음
+                throw new Error(`Unexpected image format received from API: ${typeof imageResult}`);
+            }
+
+            return {
+                content: [
+                    {
+                        type: 'image',
+                        data: base64Data,
+                        mimeType: 'image/png'
+                    }
+                ],
+                annotations: {
+                    audience: ['user'],
+                    priority: 0.9,
+                    metadata: {
+                        prompt: prompt,
+                        model: "black-forest-labs/FLUX.1-schnell",
+                        provider: "fal-ai",
+                        timestamp: new Date().toISOString()
+                    }
+                }
+            };
+
+        } catch (error) {
+            // 에러 처리
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+            
+            return {
+                content: [
+                    {
+                        type: 'text',
+                        text: `이미지 생성 중 오류가 발생했습니다: ${errorMessage}`
+                    }
+                ],
+                annotations: {
+                    audience: ['user'],
+                    priority: 1.0
+                }
+            };
+        }
+    }
+)
+
 // 예시 리소스: 서버 정보
 server.resource(
     'server://info',
@@ -174,9 +278,9 @@ server.resource(
     },
     async () => {
         const serverInfo = {
-            name: 'greeting-mcp-server',
+            name: 'greeting-image-mcp-server',
             version: '1.0.0',
-            description: '다국어 인사 MCP 서버 (영어, 한국어, 일본어 지원)',
+            description: '다국어 인사 및 AI 이미지 생성 MCP 서버 (영어, 한국어, 일본어 지원)',
             supportedLanguages: ['en', 'ko', 'ja'],
             timestamp: new Date().toISOString(),
             uptime: process.uptime(),
@@ -208,17 +312,17 @@ server.resource(
     async () => {
         const detailedServerInfo = {
             server: {
-                name: 'greeting-mcp-server',
+                name: 'greeting-image-mcp-server',
                 version: '1.0.0',
-                description: '다국어 인사 MCP 서버',
+                description: '다국어 인사 및 AI 이미지 생성 MCP 서버',
                 author: 'MCP Developer',
                 license: 'ISC'
             },
             capabilities: {
-                tools: {
-                    count: 1,
-                    available: ['greeting']
-                },
+            tools: {
+                count: 2,
+                available: ['greeting', 'generate_image']
+            },
                 resources: {
                     count: 2,
                     available: ['server://info', 'server://detailed-info']
@@ -262,6 +366,19 @@ server.resource(
                             emoji: '🙏'
                         }
                     }
+                },
+                generate_image: {
+                    description: 'AI 이미지 생성 도구',
+                    parameters: {
+                        prompt: {
+                            type: 'string',
+                            required: true,
+                            description: '이미지 생성을 위한 프롬프트 설명'
+                        }
+                    },
+                    model: 'black-forest-labs/FLUX.1-schnell',
+                    provider: 'fal-ai',
+                    outputFormat: 'base64-encoded image/png'
                 }
             },
             prompts: {
@@ -327,6 +444,12 @@ server.resource(
                         description: 'Japanese greeting',
                         command: 'greeting(name="田中", language="ja")',
                         expectedOutput: 'こんにちは、田中さん！お会いできて嬉しいです！🙏'
+                    },
+                    {
+                        tool: 'generate_image',
+                        description: 'AI image generation',
+                        command: 'generate_image(prompt="Astronaut riding a horse")',
+                        expectedOutput: 'base64-encoded PNG image'
                     }
                 ]
             }
@@ -406,7 +529,7 @@ ${code}
 async function main() {
     const transport = new StdioServerTransport()
     await server.connect(transport)
-    console.error('다국어 인사 MCP 서버가 시작되었습니다! (English, Korean, Japanese)')
+    console.error('다국어 인사 및 AI 이미지 생성 MCP 서버가 시작되었습니다! (English, Korean, Japanese + Image Generation)')
 }
 
 main().catch(error => {
