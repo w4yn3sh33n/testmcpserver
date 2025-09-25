@@ -14,11 +14,8 @@ if (!process.env.HF_TOKEN) {
     console.error('Warning: HF_TOKEN environment variable is not set. Image generation will not work.')
 }
 
-export default function createServer() {
-    // 서버 인스턴스 생성
-
-    // 서버 인스턴스 생성
-    const server = new McpServer({
+// 서버 인스턴스 생성
+const server = new McpServer({
         name: 'greeting-image-mcp-server',
         version: '1.0.0',
         capabilities: {
@@ -535,5 +532,8 @@ export default function createServer() {
         console.error('서버 시작 중 오류 발생:', error)
         process.exit(1)
     })
-    return server.server;
+
+// Smithery 배포용 export
+export default function createServer() {
+    return server;
 }
