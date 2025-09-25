@@ -529,15 +529,13 @@ export default function createServer() {
             console.error('다국어 인사 및 AI 이미지 생성 MCP 서버가 시작되었습니다! (English, Korean, Japanese + Image Generation)')
         }
 
-        main().catch(error => {
-            console.error('서버 시작 중 오류 발생:', error)
-            process.exit(1)
-        })
-
-    // Smithery 배포용 export
-    export default function createServer() {
-        return server;
-    }
+        // 직접 실행시에만 main 함수 호출 (Smithery에서는 호출하지 않음)
+        if (typeof process !== 'undefined' && process.argv && import.meta.url === `file://${process.argv[1]}`) {
+            main().catch(error => {
+                console.error('서버 시작 중 오류 발생:', error)
+                process.exit(1)
+            })
+        }
 
     return server.server;
 }
